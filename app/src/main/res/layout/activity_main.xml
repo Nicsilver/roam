@@ -14,7 +14,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginVertical="32dp"
         android:background="@drawable/panel_bg"
         android:visibility="gone"
         android:fillViewport="false">
@@ -23,80 +24,170 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="24dp"
+            android:paddingTop="22dp"
+            android:paddingBottom="16dp">
 
-            <Button
-                android:id="@+id/unit"
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Units: km/h" />
+                android:layout_gravity="center_horizontal"
+                android:text="R O A M"
+                android:textColor="#F2FFFFFF"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium" />
+
+            <View
+                android:layout_width="28dp"
+                android:layout_height="2dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="18dp"
+                android:background="#FF8A3D" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:orientation="horizontal"
+                android:background="@drawable/seg_bg"
+                android:padding="4dp">
+
+                <TextView
+                    android:id="@+id/btnKmh"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="km/h"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:id="@+id/btnMph"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="mph"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/SectionHeader"
+                android:layout_marginTop="22dp"
+                android:text="BURN-IN GUARD" />
 
             <Switch
                 android:id="@+id/swRoam"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="Move position over time" />
+                style="@style/SettingRow"
+                android:text="Reposition over time" />
 
-            <Switch
-                android:id="@+id/swColor"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Colour drift" />
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
 
-            <Switch
-                android:id="@+id/swOutline"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Outline digits" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Move every"
+                    android:textColor="#DEFFFFFF"
+                    android:textSize="15sp" />
 
-            <Switch
-                android:id="@+id/swMax"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Show max speed" />
-
-            <TextView
-                android:id="@+id/lblInterval"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="Move every 3 min"
-                android:textColor="#99FFFFFF"
-                android:textSize="13sp" />
+                <TextView
+                    android:id="@+id/intervalValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3 min"
+                    android:textColor="#FF8A3D"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
 
             <SeekBar
                 android:id="@+id/interval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:max="9" />
 
             <TextView
+                style="@style/SectionHeader"
+                android:text="DISPLAY" />
+
+            <Switch
+                android:id="@+id/swColor"
+                style="@style/SettingRow"
+                android:text="Colour drift" />
+
+            <Switch
+                android:id="@+id/swOutline"
+                style="@style/SettingRow"
+                android:text="Outline digits" />
+
+            <Switch
+                android:id="@+id/swMax"
+                style="@style/SettingRow"
+                android:text="Show max speed" />
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Brightness"
-                android:textColor="#99FFFFFF"
-                android:textSize="13sp" />
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Brightness"
+                    android:textColor="#DEFFFFFF"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/brightValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="75%"
+                    android:textColor="#FF8A3D"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
 
             <SeekBar
                 android:id="@+id/brightness"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:max="100" />
 
-            <Button
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#14FFFFFF" />
+
+            <TextView
                 android:id="@+id/resetMax"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Reset max speed" />
+                android:layout_height="48dp"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground"
+                android:text="Reset max speed"
+                android:textColor="#FF8A3D"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
 
             <TextView
                 android:id="@+id/status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:textColor="#66FFFFFF"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textColor="#4DFFFFFF"
                 android:textSize="12sp"
                 android:text="Tap anywhere to hide" />
         </LinearLayout>
