@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <com.nic.roam.SpeedView
+        android:id="@+id/speed"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ScrollView
+        android:id="@+id/panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="16dp"
+        android:background="@drawable/panel_bg"
+        android:visibility="gone"
+        android:fillViewport="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <Button
+                android:id="@+id/unit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Units: km/h" />
+
+            <Switch
+                android:id="@+id/swRoam"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Move position over time" />
+
+            <Switch
+                android:id="@+id/swColor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Colour drift" />
+
+            <Switch
+                android:id="@+id/swOutline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Outline digits" />
+
+            <Switch
+                android:id="@+id/swMax"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Show max speed" />
+
+            <TextView
+                android:id="@+id/lblInterval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Move every 3 min"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp" />
+
+            <SeekBar
+                android:id="@+id/interval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="9" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Brightness"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp" />
+
+            <SeekBar
+                android:id="@+id/brightness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100" />
+
+            <Button
+                android:id="@+id/resetMax"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Reset max speed" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textColor="#66FFFFFF"
+                android:textSize="12sp"
+                android:text="Tap anywhere to hide" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
