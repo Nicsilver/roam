@@ -4,3 +4,6 @@ local.properties
 .idea/
 *.iml
 .claude/settings.local.json
+*.keystore
+keystore.local.properties
+CLAUDE.md

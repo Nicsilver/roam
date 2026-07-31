@@ -5,5 +5,25 @@
         <item name="android:navigationBarColor">@android:color/black</item>
         <item name="android:statusBarColor">@android:color/black</item>
         <item name="android:colorAccent">#FF8A3D</item>
+        <item name="android:colorControlActivated">#FF8A3D</item>
+    </style>
+
+    <style name="SectionHeader">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">18dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">#8AFF8A3D</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="SettingRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">#DEFFFFFF</item>
     </style>
 </resources>

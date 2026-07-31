@@ -12,9 +12,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.graphics.Color
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
@@ -25,7 +25,8 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var prefs: SharedPreferences
     private lateinit var speed: SpeedView
     private lateinit var panel: View
-    private lateinit var unitButton: Button
+    private lateinit var btnKmh: TextView
+    private lateinit var btnMph: TextView
     private lateinit var status: TextView
 
     private val handler = Handler(Looper.getMainLooper())
@@ -58,7 +59,8 @@ class MainActivity : Activity(), LocationListener {
         prefs = getSharedPreferences("roam", Context.MODE_PRIVATE)
         speed = findViewById(R.id.speed)
         panel = findViewById(R.id.panel)
-        unitButton = findViewById(R.id.unit)
+        btnKmh = findViewById(R.id.btnKmh)
+        btnMph = findViewById(R.id.btnMph)
         status = findViewById(R.id.status)
 
         speed.useMph = prefs.getBoolean("mph", false)
@@ -70,13 +72,9 @@ class MainActivity : Activity(), LocationListener {
         speed.setOnClickListener { setPanelVisible(panel.visibility != View.VISIBLE) }
         panel.setOnClickListener { setPanelVisible(false) }
 
-        unitButton.setOnClickListener {
-            speed.useMph = !speed.useMph
-            prefs.edit().putBoolean("mph", speed.useMph).apply()
-            updateUnitLabel()
-            keepPanelAwake()
-        }
-        updateUnitLabel()
+        btnKmh.setOnClickListener { setUnit(false) }
+        btnMph.setOnClickListener { setUnit(true) }
+        updateUnitSegment()
 
         bindSwitch(R.id.swRoam, "roam", speed.roam) { speed.roam = it }
 
@@ -84,19 +82,21 @@ class MainActivity : Activity(), LocationListener {
         bindSwitch(R.id.swOutline, "outline", speed.outline) { speed.outline = it }
         bindSwitch(R.id.swMax, "showmax", speed.showMax) { speed.showMax = it }
 
-        val intervalLabel = findViewById<TextView>(R.id.lblInterval)
+        val intervalValue = findViewById<TextView>(R.id.intervalValue)
         bindSeekBar(R.id.interval, "interval", 2) { p ->
             val minutes = p + 1
             speed.moveIntervalSec = minutes * 60f
-            intervalLabel.text = "Move every $minutes min"
+            intervalValue.text = "$minutes min"
         }
+        val brightValue = findViewById<TextView>(R.id.brightValue)
         bindSeekBar(R.id.brightness, "brightness", 75) { p ->
             val lp = window.attributes
             lp.screenBrightness = 0.02f + p / 100f * 0.98f
             window.attributes = lp
+            brightValue.text = "$p%"
         }
 
-        findViewById<Button>(R.id.resetMax).setOnClickListener {
+        findViewById<TextView>(R.id.resetMax).setOnClickListener {
             speed.maxKmh = 0f
             keepPanelAwake()
         }
@@ -141,8 +141,20 @@ class MainActivity : Activity(), LocationListener {
         })
     }
 
-    private fun updateUnitLabel() {
-        unitButton.text = if (speed.useMph) "Units: mph" else "Units: km/h"
+    private fun setUnit(mph: Boolean) {
+        speed.useMph = mph
+        prefs.edit().putBoolean("mph", mph).apply()
+        updateUnitSegment()
+        keepPanelAwake()
+    }
+
+    private fun updateUnitSegment() {
+        val selected = if (speed.useMph) btnMph else btnKmh
+        val other = if (speed.useMph) btnKmh else btnMph
+        selected.setBackgroundResource(R.drawable.seg_selected)
+        selected.setTextColor(Color.rgb(17, 17, 17))
+        other.background = null
+        other.setTextColor(Color.argb(153, 255, 255, 255))
     }
 
     private fun setPanelVisible(visible: Boolean) {

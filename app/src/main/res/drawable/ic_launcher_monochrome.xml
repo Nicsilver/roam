@@ -5,31 +5,19 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 270° gauge track, open at the bottom -->
     <path
         android:pathData="M35.6,72.4 A26,26 0 1 1 72.4,72.4"
-        android:strokeColor="#4A4A4E"
-        android:strokeWidth="5"
-        android:strokeLineCap="round" />
-
-    <!-- swept portion up to the needle -->
-    <path
-        android:pathData="M35.6,72.4 A26,26 0 0 1 41,31.5"
-        android:strokeColor="#FF8A3D"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="5"
         android:strokeLineCap="round" />
 
     <path
         android:pathData="M54,54 L44,36.7"
-        android:strokeColor="#FF8A3D"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="5"
         android:strokeLineCap="round" />
 
     <path
         android:pathData="M54,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"
-        android:fillColor="#FF8A3D" />
-
-    <path
-        android:pathData="M54,54 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"
-        android:fillColor="#141414" />
+        android:fillColor="#FFFFFF" />
 </vector>
