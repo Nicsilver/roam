@@ -1,0 +1,1 @@
+First F-Droid release. GPS speed on a pure black screen, built to avoid OLED burn-in: the readout drifts to a new spot every few minutes, with hue drift and an outline digit mode to spread the load. No ads, no tracking, no network access.

@@ -11,22 +11,31 @@ android {
         applicationId "com.nic.roam"
         minSdk 26
         targetSdk 36
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 2
+        versionName "1.0.1"
     }
 
     signingConfigs {
         release {
-            storeFile file(System.getenv("KEYSTORE_PATH") ?: "roam.keystore")
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
-            keyAlias System.getenv("KEY_ALIAS") ?: ""
-            keyPassword System.getenv("KEY_PASSWORD") ?: ""
+            // Only wire up signing when the keystore is actually present. On the GitHub
+            // release runner KEYSTORE_PATH points at the decoded keystore; on F-Droid's
+            // build server neither the env var nor the file exist, so the release build
+            // is left unsigned for F-Droid to sign with its own key.
+            def ksFile = file(System.getenv("KEYSTORE_PATH") ?: "roam.keystore")
+            if (ksFile.exists()) {
+                storeFile ksFile
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias System.getenv("KEY_ALIAS") ?: ""
+                keyPassword System.getenv("KEY_PASSWORD") ?: ""
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (file(System.getenv("KEYSTORE_PATH") ?: "roam.keystore").exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

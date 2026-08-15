@@ -1,0 +1,1 @@
+A GPS speedometer that treats your OLED with respect. No ads, no tracking.

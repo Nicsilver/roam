@@ -1,0 +1,20 @@
+Roam shows one thing: your current GPS speed, in big digits on a pure black screen, with nothing else fighting for your attention.
+
+It exists because leaving a navigation app open for hours just to watch your speed is rough on OLED screens. A bright, static interface slowly burns itself into the panel. Roam is designed from the ground up to leave no trace on yours.
+
+How it protects your screen:
+
+* The readout moves. Every few minutes (1 to 10, your choice) the speed display glides to a new position, so no area of the panel carries the load for long.
+* Pure black background. On OLED, black pixels are switched off, so only the digits are lit.
+* Colour drift. The digit colour slowly shifts hue over time, so no single subpixel is driven hard at one fixed colour for hours.
+* Outline digits. An optional hollow digit style that lights a fraction of the pixels.
+* Brightness control. Dim the display from inside the app without touching your system settings.
+
+The rest:
+
+* Current speed in km/h or mph, plus a session max.
+* The screen stays awake while the app is open.
+* No ads, no tracking, no network access at all. The only permission is location, used for GPS speed.
+* Tiny: the app is well under 100 KB.
+
+Roam is free and open source (AGPL-3.0). Source code and privacy details are linked below.
