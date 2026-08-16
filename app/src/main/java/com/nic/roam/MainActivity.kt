@@ -13,7 +13,9 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.graphics.Color
+import android.graphics.Typeface
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.CompoundButton
 import android.widget.SeekBar
@@ -63,6 +65,8 @@ class MainActivity : Activity(), LocationListener {
         btnMph = findViewById(R.id.btnMph)
         status = findViewById(R.id.status)
 
+        applyUiFont(panel)
+
         speed.useMph = prefs.getBoolean("mph", false)
         speed.roam = prefs.getBoolean("roam", true)
         speed.colorShift = prefs.getBoolean("color", true)
@@ -110,6 +114,15 @@ class MainActivity : Activity(), LocationListener {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ), 1
             )
+        }
+    }
+
+    // Give the whole settings panel the same Teko face as the readout.
+    private val uiTypeface by lazy { Typeface.createFromAsset(assets, "fonts/Teko-text.ttf") }
+    private fun applyUiFont(v: View) {
+        when (v) {
+            is ViewGroup -> for (i in 0 until v.childCount) applyUiFont(v.getChildAt(i))
+            is TextView -> v.typeface = uiTypeface
         }
     }
 

@@ -1,0 +1,1 @@
+New Teko display font across the whole app, including the settings panel. The outline digit style is now a clean single-line hollow numeral (no more crossing lines at the tight corners of a 4).

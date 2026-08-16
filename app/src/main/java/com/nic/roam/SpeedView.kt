@@ -33,13 +33,21 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
     var showMax = true
     var moveIntervalSec = 180f
 
+    // Teko (SIL OFL), tall and condensed, for the digits. The outline style uses a second copy
+    // converted offline to clean single-line hollow outlines — one line per digit, counters and
+    // all. Stroking the solid face at draw time instead would trace both walls of every stem and
+    // cross itself at the tight junctions.
+    private val fillTypeface =
+        Typeface.createFromAsset(context.assets, "fonts/Teko-digits.ttf")
+    private val outlineTypeface =
+        Typeface.createFromAsset(context.assets, "fonts/Teko-digits-outline.ttf")
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif", Typeface.BOLD)
+        typeface = fillTypeface
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+        typeface = Typeface.createFromAsset(context.assets, "fonts/Teko-text.ttf")
     }
 
     private val startedAt = SystemClock.elapsedRealtime()
@@ -78,6 +86,7 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val smallSize = bigSize * 0.16f
         val maxSize = bigSize * 0.11f
 
+        paint.typeface = if (outline) outlineTypeface else fillTypeface
         paint.textSize = bigSize
         labelPaint.textSize = smallSize
 
@@ -131,12 +140,6 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
 
         paint.color = tint
         paint.alpha = alpha
-        if (outline) {
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = bigSize * 0.045f
-        } else {
-            paint.style = Paint.Style.FILL
-        }
         canvas.drawText(digits, cx, top + digitsH, paint)
 
         labelPaint.color = tint
