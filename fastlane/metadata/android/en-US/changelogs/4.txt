@@ -1,0 +1,1 @@
+New Teko display font throughout the app, including the settings panel. Refreshed store art. The outline digit style is a clean single-line hollow numeral now.

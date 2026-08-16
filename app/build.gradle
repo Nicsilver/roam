@@ -11,8 +11,15 @@ android {
         applicationId "com.nic.roam"
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName "1.0.2"
+        versionCode 4
+        versionName "1.0.3"
+    }
+
+    // AGP embeds a "dependency metadata" blob in the signing block by default. It is not
+    // reproducible and F-Droid rejects it, so drop it (there are no dependencies anyway).
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
     }
 
     signingConfigs {
