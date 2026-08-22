@@ -133,6 +133,11 @@
                 style="@style/SettingRow"
                 android:text="Show max speed" />
 
+            <Switch
+                android:id="@+id/swHeading"
+                style="@style/SettingRow"
+                android:text="Show heading" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

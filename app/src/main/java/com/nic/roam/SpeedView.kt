@@ -31,6 +31,10 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
     var colorShift = true
     var outline = false
     var showMax = true
+    var showHeading = true
+    // Course over ground in degrees, or -1 when there is none. GPS bearing is meaningless at a
+    // standstill, so MainActivity clears it below a small speed rather than us guessing here.
+    var headingDeg = -1f
     var moveIntervalSec = 180f
 
     // Teko (SIL OFL), tall and condensed, for the digits. The outline style uses a second copy
@@ -83,30 +87,31 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val t = (SystemClock.elapsedRealtime() - startedAt) / 1000.0
 
         val bigSize = bigTextSize(w, h)
-        val smallSize = bigSize * 0.16f
+        val headingSize = bigSize * 0.13f
         val maxSize = bigSize * 0.11f
 
         paint.typeface = if (outline) outlineTypeface else fillTypeface
         paint.textSize = bigSize
-        labelPaint.textSize = smallSize
 
         val speed = if (useMph) speedKmh * MPH else speedKmh
         val digits = if (!hasFix) "- -" else speed.roundToInt().coerceAtLeast(0).toString()
-        val unit = if (useMph) "mph" else "km/h"
 
         val digitsW = paint.measureText(digits)
         val gap = bigSize * 0.10f
         // Cap height, not the font's full line height: digits have no descenders, so using
         // the metrics directly would leave the block visibly high in the safe area.
         val digitsH = bigSize * 0.72f
+        val headingLine =
+            if (showHeading && hasFix && headingDeg >= 0f) headingLabel(headingDeg) else null
         val maxLine = if (showMax && maxKmh > 0f) {
             val m = if (useMph) maxKmh * MPH else maxKmh
             "max ${m.roundToInt()}"
         } else null
 
-        var blockH = digitsH + gap + smallSize
+        var blockH = digitsH
+        if (headingLine != null) blockH += headingSize * 2.0f
         if (maxLine != null) blockH += maxSize * 2.2f
-        val blockW = maxOf(digitsW, labelPaint.measureText(unit))
+        val blockW = digitsW
 
         val margin = min(w, h) * 0.03f
         val ax = ((w - blockW) / 2f - margin).coerceAtLeast(0f)
@@ -143,8 +148,12 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         canvas.drawText(digits, cx, top + digitsH, paint)
 
         labelPaint.color = tint
-        labelPaint.alpha = (alpha * 0.55f).toInt()
-        canvas.drawText(unit, cx, top + digitsH + gap + smallSize, labelPaint)
+
+        if (headingLine != null) {
+            labelPaint.textSize = headingSize
+            labelPaint.alpha = (alpha * 0.62f).toInt()
+            canvas.drawText(headingLine, cx, top + digitsH + gap + headingSize * 1.2f, labelPaint)
+        }
 
         if (maxLine != null) {
             labelPaint.textSize = maxSize
@@ -155,7 +164,7 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         if (!hasFix) {
             labelPaint.textSize = maxSize
             labelPaint.alpha = 110
-            canvas.drawText("searching for GPS", cx, top + digitsH + gap + smallSize * 2.4f, labelPaint)
+            canvas.drawText("searching for GPS", cx, top + digitsH + gap + maxSize * 1.5f, labelPaint)
         }
     }
 
@@ -164,6 +173,12 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
     private fun slotX(step: Int) = frac(0.5f + 0.7548776f * step) * 2f - 1f
 
     private fun slotY(step: Int) = frac(0.5f + 0.5698403f * step) * 2f - 1f
+
+    private fun headingLabel(deg: Float): String {
+        val d = ((deg % 360f) + 360f) % 360f
+        val point = COMPASS_8[(d / 45f).roundToInt() % 8]
+        return "%s %03d°".format(point, d.roundToInt() % 360)
+    }
 
     private fun frac(v: Float) = v - kotlin.math.floor(v)
 
@@ -182,5 +197,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         private const val SLIDE_FRAME_MS = 16L
         private const val SLIDE_SECONDS = 1.1f
         private const val MPH = 0.621371f
+        private val COMPASS_8 = arrayOf(
+            "N", "NE", "E", "SE", "S", "SW", "W", "NW"
+        )
     }
 }

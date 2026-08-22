@@ -69,9 +69,10 @@ class MainActivity : Activity(), LocationListener {
 
         speed.useMph = prefs.getBoolean("mph", false)
         speed.roam = prefs.getBoolean("roam", true)
-        speed.colorShift = prefs.getBoolean("color", true)
-        speed.outline = prefs.getBoolean("outline", false)
-        speed.showMax = prefs.getBoolean("showmax", true)
+        speed.colorShift = prefs.getBoolean("color", false)
+        speed.outline = prefs.getBoolean("outline", true)
+        speed.showMax = prefs.getBoolean("showmax", false)
+        speed.showHeading = prefs.getBoolean("heading", false)
 
         speed.setOnClickListener { setPanelVisible(panel.visibility != View.VISIBLE) }
         panel.setOnClickListener { setPanelVisible(false) }
@@ -85,6 +86,7 @@ class MainActivity : Activity(), LocationListener {
         bindSwitch(R.id.swColor, "color", speed.colorShift) { speed.colorShift = it }
         bindSwitch(R.id.swOutline, "outline", speed.outline) { speed.outline = it }
         bindSwitch(R.id.swMax, "showmax", speed.showMax) { speed.showMax = it }
+        bindSwitch(R.id.swHeading, "heading", speed.showHeading) { speed.showHeading = it }
 
         val intervalValue = findViewById<TextView>(R.id.intervalValue)
         bindSeekBar(R.id.interval, "interval", 2) { p ->
@@ -93,7 +95,7 @@ class MainActivity : Activity(), LocationListener {
             intervalValue.text = "$minutes min"
         }
         val brightValue = findViewById<TextView>(R.id.brightValue)
-        bindSeekBar(R.id.brightness, "brightness", 75) { p ->
+        bindSeekBar(R.id.brightness, "brightness", 80) { p ->
             val lp = window.attributes
             lp.screenBrightness = 0.02f + p / 100f * 0.98f
             window.attributes = lp
@@ -276,6 +278,13 @@ class MainActivity : Activity(), LocationListener {
         if (smoothed < 0.4f) smoothed = 0f
 
         speed.speedKmh = smoothed
+        // Below a walking pace GPS bearing is just noise; clear it so the heading hides rather
+        // than flickering through random directions while parked.
+        speed.headingDeg = if (location.hasBearing() && smoothed >= HEADING_MIN_KMH) {
+            location.bearing
+        } else {
+            -1f
+        }
         speed.hasFix = true
         speed.stale = false
         if (smoothed > speed.maxKmh) speed.maxKmh = smoothed
@@ -290,5 +299,6 @@ class MainActivity : Activity(), LocationListener {
 
     companion object {
         private const val PANEL_TIMEOUT_MS = 15_000L
+        private const val HEADING_MIN_KMH = 5f
     }
 }

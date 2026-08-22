@@ -11,8 +11,8 @@ android {
         applicationId "com.nic.roam"
         minSdk 26
         targetSdk 36
-        versionCode 4
-        versionName "1.0.3"
+        versionCode 5
+        versionName "1.0.4"
     }
 
     // AGP embeds a "dependency metadata" blob in the signing block by default. It is not
