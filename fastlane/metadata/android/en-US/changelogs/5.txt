@@ -1,0 +1,1 @@
+Optional compass heading under the speed, off by default. Removed the km/h label to keep the readout clean. Retuned the out-of-the-box defaults.
