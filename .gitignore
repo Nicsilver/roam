@@ -7,3 +7,4 @@ local.properties
 *.keystore
 keystore.local.properties
 CLAUDE.md
+store/promo-drafts.md
