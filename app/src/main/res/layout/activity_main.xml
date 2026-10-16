@@ -9,33 +9,59 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <ScrollView
+    <!-- Vertical padding keeps the faded edges and the scrollbar inside the rounded corners. -->
+    <com.nic.roam.PanelScrollView
         android:id="@+id/panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginVertical="32dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="24dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
+        android:paddingEnd="6dp"
         android:background="@drawable/panel_bg"
         android:visibility="gone"
-        android:fillViewport="false">
+        android:fillViewport="false"
+        android:requiresFadingEdge="vertical"
+        android:fadingEdgeLength="64dp"
+        android:scrollbars="vertical"
+        android:scrollbarStyle="insideInset"
+        android:fadeScrollbars="false"
+        android:scrollbarThumbVertical="@drawable/scroll_thumb">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="22dp"
-            android:paddingBottom="16dp">
+            android:paddingStart="24dp"
+            android:paddingEnd="18dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="2dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="R O A M"
-                android:textColor="#F2FFFFFF"
-                android:textSize="15sp"
-                android:fontFamily="sans-serif-medium" />
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="R O A M"
+                    android:textColor="#F2FFFFFF"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <ImageView
+                    android:id="@+id/closePanel"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="-12dp"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_close"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Close settings" />
+            </FrameLayout>
 
             <View
                 android:layout_width="28dp"
@@ -73,6 +99,37 @@
                     android:fontFamily="sans-serif-medium" />
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="18dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Brightness"
+                    android:textColor="#DEFFFFFF"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/brightValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="75%"
+                    android:textColor="#FF8A3D"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/brightness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:max="100" />
+
             <TextView
                 style="@style/SectionHeader"
                 android:layout_marginTop="22dp"
@@ -84,6 +141,7 @@
                 android:text="Reposition over time" />
 
             <LinearLayout
+                android:id="@+id/intervalRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -118,6 +176,14 @@
                 style="@style/SectionHeader"
                 android:text="DISPLAY" />
 
+            <LinearLayout
+                android:id="@+id/swatches"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="6dp"
+                android:orientation="horizontal" />
+
             <Switch
                 android:id="@+id/swColor"
                 style="@style/SettingRow"
@@ -138,6 +204,11 @@
                 style="@style/SettingRow"
                 android:text="Show heading" />
 
+            <Switch
+                android:id="@+id/swMirror"
+                style="@style/SettingRow"
+                android:text="HUD mirror (windshield)" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -148,26 +219,58 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Brightness"
+                    android:text="Speed size"
                     android:textColor="#DEFFFFFF"
                     android:textSize="15sp" />
 
                 <TextView
-                    android:id="@+id/brightValue"
+                    android:id="@+id/speedSizeValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="75%"
+                    android:text="100%"
                     android:textColor="#FF8A3D"
                     android:textSize="15sp"
                     android:fontFamily="sans-serif-medium" />
             </LinearLayout>
 
             <SeekBar
-                android:id="@+id/brightness"
+                android:id="@+id/speedSize"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:max="100" />
+                android:max="15" />
+
+            <LinearLayout
+                android:id="@+id/labelSizeRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Max / heading size"
+                    android:textColor="#DEFFFFFF"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/labelSizeValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="100%"
+                    android:textColor="#FF8A3D"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/labelSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:max="8" />
 
             <View
                 android:layout_width="match_parent"
@@ -187,6 +290,28 @@
                 android:fontFamily="sans-serif-medium" />
 
             <TextView
+                android:id="@+id/releaseNotes"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground"
+                android:text="Release notes"
+                android:textColor="#99FFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:id="@+id/closePanelBottom"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:background="@drawable/seg_selected"
+                android:text="Close"
+                android:textColor="#111111"
+                android:textSize="16sp" />
+
+            <TextView
                 android:id="@+id/status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -196,5 +321,5 @@
                 android:textSize="12sp"
                 android:text="Tap anywhere to hide" />
         </LinearLayout>
-    </ScrollView>
+    </com.nic.roam.PanelScrollView>
 </FrameLayout>

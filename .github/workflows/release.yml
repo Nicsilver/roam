@@ -46,6 +46,15 @@ jobs:
             app/build/outputs/bundle/release/app-release.aab
           generate_release_notes: true
 
+      # Play's "What's new" comes from the same changelog F-Droid reads. The store listing is
+      # en-GB, so the file is named for that locale.
+      - name: Prepare Play release notes
+        run: |
+          code=$(grep -oP 'versionCode \K\d+' app/build.gradle)
+          mkdir -p whatsnew
+          notes=fastlane/metadata/android/en-US/changelogs/$code.txt
+          if [ -f "$notes" ]; then cp "$notes" whatsnew/whatsnew-en-GB; fi
+
       # Skipped until PLAY_SERVICE_ACCOUNT_JSON exists, so tags keep working before Play is wired up.
       - name: Publish AAB to Google Play (production)
         if: env.PLAY_SA_JSON != ''
@@ -55,5 +64,6 @@ jobs:
           packageName: com.nic.roam
           releaseFiles: app/build/outputs/bundle/release/app-release.aab
           mappingFile: app/build/outputs/mapping/release/mapping.txt
+          whatsNewDirectory: whatsnew
           tracks: production
           status: completed

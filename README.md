@@ -16,7 +16,9 @@ Most people who want a speed readout in the car just open Google Maps and leave 
 
 ## The rest
 
-- Current speed in km/h or mph, plus a session max
+- Current speed in km/h or mph, plus an optional session max and compass heading
+- Seven readout colours, and size sliders for the speed and for the small lines
+- HUD mirror mode: lay the phone flat under the windshield and read the speed in the reflection
 - Screen stays awake while the app is open
 - No ads, no tracking, no network access at all. The only permission is location, used for GPS speed.
 - Tiny: the APK is well under 100 KB
@@ -37,7 +39,7 @@ Requires JDK 17+ and the Android SDK.
 
 ## Releasing
 
-Tag a version and push it. GitHub Actions builds the signed APK and AAB and attaches them to a GitHub release:
+Tag a version and push it. GitHub Actions builds the signed APK and AAB, attaches them to a GitHub release and publishes the AAB to Google Play, with the matching `fastlane/.../changelogs/<versionCode>.txt` as the release notes:
 
 ```
 git tag v1.1.0

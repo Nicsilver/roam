@@ -1,0 +1,1 @@
+HUD mirror for reading the speed off the windshield. Colour presets for the readout (white, red, orange, yellow, green, cyan, blue). Size sliders for the speed and for the max speed and heading lines. Shows 0 while parked instead of two dashes. A What's new note after each update, plus the full history under Release notes in settings.
