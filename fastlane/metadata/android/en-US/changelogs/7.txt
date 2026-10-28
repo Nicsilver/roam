@@ -1,0 +1,1 @@
+Knots as a third speed unit, for boats. Swipe up or down on the speed to change brightness; a bar shows the level and keeps clear of the speed.

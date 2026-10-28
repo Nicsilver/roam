@@ -11,6 +11,10 @@ object ReleaseNotes {
     fun since(lastSeenCode: Int) = all.filter { it.code > lastSeenCode }
 
     val all = listOf(
+        Release(7, "1.2.0", "2026-10-28", listOf(
+            "Knots as a third speed unit, for boats",
+            "Swipe up or down on the speed to change brightness",
+        )),
         Release(6, "1.1.0", "2026-10-16", listOf(
             "HUD mirror: lay the phone flat under the windshield and read the speed in the reflection",
             "Pick a colour for the readout: white, red, orange, yellow, green, cyan or blue",
