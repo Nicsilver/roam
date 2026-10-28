@@ -30,6 +30,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import kotlin.math.roundToInt
 
 class MainActivity : Activity(), LocationListener {
 
@@ -38,6 +39,8 @@ class MainActivity : Activity(), LocationListener {
     private lateinit var panel: PanelScrollView
     private lateinit var btnKmh: TextView
     private lateinit var btnMph: TextView
+    private lateinit var btnKn: TextView
+    private lateinit var brightBar: SeekBar
     private lateinit var status: TextView
 
     private val handler = Handler(Looper.getMainLooper())
@@ -72,6 +75,7 @@ class MainActivity : Activity(), LocationListener {
         panel = findViewById(R.id.panel)
         btnKmh = findViewById(R.id.btnKmh)
         btnMph = findViewById(R.id.btnMph)
+        btnKn = findViewById(R.id.btnKn)
         status = findViewById(R.id.status)
 
         applyUiFont(panel)
@@ -101,7 +105,9 @@ class MainActivity : Activity(), LocationListener {
             if (maxH != panel.maxHeightPx) panel.post { panel.maxHeightPx = maxH }
         }
 
-        speed.useMph = prefs.getBoolean("mph", false)
+        // "mph" is the boolean older versions stored before there was a third unit.
+        speed.unit = prefs.getString("unit", null)?.let { SpeedUnit.fromPref(it) }
+            ?: if (prefs.getBoolean("mph", false)) SpeedUnit.MPH else SpeedUnit.KMH
         speed.roam = prefs.getBoolean("roam", true)
         speed.colorShift = prefs.getBoolean("color", false)
         speed.outline = prefs.getBoolean("outline", true)
@@ -113,8 +119,9 @@ class MainActivity : Activity(), LocationListener {
         findViewById<View>(R.id.closePanel).setOnClickListener { setPanelVisible(false) }
         findViewById<View>(R.id.closePanelBottom).setOnClickListener { setPanelVisible(false) }
 
-        btnKmh.setOnClickListener { setUnit(false) }
-        btnMph.setOnClickListener { setUnit(true) }
+        btnKmh.setOnClickListener { setUnit(SpeedUnit.KMH) }
+        btnMph.setOnClickListener { setUnit(SpeedUnit.MPH) }
+        btnKn.setOnClickListener { setUnit(SpeedUnit.KNOTS) }
         updateUnitSegment()
 
         bindSwitch(R.id.swRoam, "roam", speed.roam) {
@@ -160,11 +167,24 @@ class MainActivity : Activity(), LocationListener {
         updateDependentRows()
 
         val brightValue = findViewById<TextView>(R.id.brightValue)
+        brightBar = findViewById(R.id.brightness)
         bindSeekBar(R.id.brightness, "brightness", 80) { p ->
             val lp = window.attributes
             lp.screenBrightness = 0.02f + p / 100f * 0.98f
             window.attributes = lp
             brightValue.text = "$p%"
+        }
+
+        var dragStartPct = 0f
+        speed.onBrightnessDragStart = { dragStartPct = brightBar.progress.toFloat() }
+        speed.onBrightnessDrag = { frac ->
+            val pct = (dragStartPct + frac / BRIGHTNESS_DRAG_SPAN * brightBar.max)
+                .coerceIn(0f, brightBar.max.toFloat()).roundToInt()
+            if (pct != brightBar.progress) brightBar.progress = pct
+            speed.flashBrightness(pct)
+        }
+        speed.onBrightnessDragEnd = {
+            prefs.edit().putInt("brightness", brightBar.progress).apply()
         }
 
         findViewById<TextView>(R.id.resetMax).setOnClickListener {
@@ -308,20 +328,25 @@ class MainActivity : Activity(), LocationListener {
         }
     }
 
-    private fun setUnit(mph: Boolean) {
-        speed.useMph = mph
-        prefs.edit().putBoolean("mph", mph).apply()
+    private fun setUnit(unit: SpeedUnit) {
+        speed.unit = unit
+        prefs.edit().putString("unit", unit.pref).apply()
         updateUnitSegment()
         keepPanelAwake()
     }
 
     private fun updateUnitSegment() {
-        val selected = if (speed.useMph) btnMph else btnKmh
-        val other = if (speed.useMph) btnKmh else btnMph
-        selected.setBackgroundResource(R.drawable.seg_selected)
-        selected.setTextColor(Color.rgb(17, 17, 17))
-        other.background = null
-        other.setTextColor(Color.argb(153, 255, 255, 255))
+        for ((unit, button) in listOf(
+            SpeedUnit.KMH to btnKmh, SpeedUnit.MPH to btnMph, SpeedUnit.KNOTS to btnKn
+        )) {
+            if (unit == speed.unit) {
+                button.setBackgroundResource(R.drawable.seg_selected)
+                button.setTextColor(Color.rgb(17, 17, 17))
+            } else {
+                button.background = null
+                button.setTextColor(Color.argb(153, 255, 255, 255))
+            }
+        }
     }
 
     // From targetSdk 36 predictive back skips onBackPressed, so on API 33+ back is caught with
@@ -350,6 +375,7 @@ class MainActivity : Activity(), LocationListener {
     private fun setPanelVisible(visible: Boolean) {
         if (visible != (panel.visibility == View.VISIBLE)) setBackClosesPanel(visible)
         panel.visibility = if (visible) View.VISIBLE else View.GONE
+        speed.swipeEnabled = !visible
         applyImmersive()
         handler.removeCallbacks(hidePanel)
         // The panel is ordinary static UI, so it is the one thing here that could burn in.
@@ -485,6 +511,8 @@ class MainActivity : Activity(), LocationListener {
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
 
     companion object {
+        // Share of the screen height a full 0-100% brightness sweep takes.
+        private const val BRIGHTNESS_DRAG_SPAN = 0.6f
         private const val PANEL_TIMEOUT_MS = 15_000L
         private const val HEADING_MIN_KMH = 5f
         private const val PANEL_MAX_WIDTH_DP = 440

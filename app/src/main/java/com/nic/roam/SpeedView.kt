@@ -10,8 +10,10 @@ import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.View
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -25,6 +27,16 @@ import kotlin.math.sin
  *  - hue drift, so no single subpixel carries the load for long
  *  - pure black background and an optional outline digit style, which lights far fewer pixels
  */
+enum class SpeedUnit(val pref: String, val perKmh: Float) {
+    KMH("kmh", 1f),
+    MPH("mph", 0.621371f),
+    KNOTS("kn", 0.539957f);
+
+    companion object {
+        fun fromPref(value: String?) = values().firstOrNull { it.pref == value } ?: KMH
+    }
+}
+
 class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
     var speedKmh = 0f
@@ -35,7 +47,7 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
     var stale = false
     var maxKmh = 0f
 
-    var useMph = false
+    var unit = SpeedUnit.KMH
     var roam = true
     var colorShift = true
     var outline = false
@@ -68,6 +80,23 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         typeface = Typeface.createFromAsset(context.assets, "fonts/Teko-text.ttf")
     }
 
+    // Drag callbacks for the brightness swipe. The fraction is the distance dragged since the
+    // drag began, in screen heights, positive upwards.
+    var swipeEnabled = true
+    var onBrightnessDragStart: (() -> Unit)? = null
+    var onBrightnessDrag: ((Float) -> Unit)? = null
+    var onBrightnessDragEnd: (() -> Unit)? = null
+
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    // The system owns the screen edges (back, home, revealing the bars), so a drag that starts
+    // there is never ours.
+    private val edgeGuard = 24 * resources.displayMetrics.density
+    private var downX = 0f
+    private var downY = 0f
+    private var trackingDrag = false
+    private var dragging = false
+    private var dragBaseY = 0f
+
     // A plain View clicks on any down/up pair inside it, so an edge swipe for back or the
     // system bars would also toggle the settings panel. Only a real tap counts.
     private val tapDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -78,8 +107,71 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         }
     })
 
+    private fun endDrag() {
+        if (dragging) onBrightnessDragEnd?.invoke()
+        dragging = false
+        trackingDrag = false
+    }
+
     @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent) = tapDetector.onTouchEvent(event)
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                dragging = false
+                trackingDrag = swipeEnabled &&
+                    downX > edgeGuard && downX < width - edgeGuard &&
+                    downY > edgeGuard && downY < height - edgeGuard
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (trackingDrag && !dragging) {
+                    val dx = event.x - downX
+                    val dy = event.y - downY
+                    if (abs(dx) > touchSlop || abs(dy) > touchSlop) {
+                        // Mostly horizontal drags are not ours; stop looking at this gesture.
+                        if (abs(dy) > abs(dx) * 1.5f) {
+                            dragging = true
+                            // Start from here so the value does not jump by the slop distance.
+                            dragBaseY = event.y
+                            onBrightnessDragStart?.invoke()
+                            val cancel = MotionEvent.obtain(event)
+                            cancel.action = MotionEvent.ACTION_CANCEL
+                            tapDetector.onTouchEvent(cancel)
+                            cancel.recycle()
+                        } else {
+                            trackingDrag = false
+                        }
+                    }
+                }
+                if (dragging) {
+                    onBrightnessDrag?.invoke((dragBaseY - event.y) / height)
+                    return true
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                if (dragging) {
+                    endDrag()
+                    return true
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> endDrag()
+        }
+        return if (dragging) true else tapDetector.onTouchEvent(event)
+    }
+
+    private var indicatorPct = 0
+    private var indicatorHideAt = 0L
+    private val indicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** Shows the brightness bar for a moment; call again to keep it up while dragging. */
+    fun flashBrightness(pct: Int) {
+        indicatorPct = pct
+        indicatorHideAt = SystemClock.elapsedRealtime() + INDICATOR_MS
+        invalidate()
+    }
+
+    private fun indicatorVisible() = SystemClock.elapsedRealtime() < indicatorHideAt
 
     private val startedAt = SystemClock.elapsedRealtime()
     private var running = false
@@ -88,7 +180,7 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         override fun run() {
             if (!running) return
             invalidate()
-            postDelayed(this, if (sliding) SLIDE_FRAME_MS else IDLE_FRAME_MS)
+            postDelayed(this, if (sliding || indicatorVisible()) SLIDE_FRAME_MS else IDLE_FRAME_MS)
         }
     }
 
@@ -127,7 +219,7 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val bigSize = digitTextSize(w, h, baseSize, headingSize, maxSize)
         paint.textSize = bigSize
 
-        val speed = if (useMph) speedKmh * MPH else speedKmh
+        val speed = speedKmh * unit.perKmh
         val digits = if (!hasFix) "0" else speed.roundToInt().coerceAtLeast(0).toString()
 
         val digitsW = paint.measureText(digits)
@@ -138,7 +230,7 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val headingLine =
             if (showHeading && hasFix && headingDeg >= 0f) headingLabel(headingDeg) else null
         val maxLine = if (showMax && maxKmh > 0f) {
-            val m = if (useMph) maxKmh * MPH else maxKmh
+            val m = maxKmh * unit.perKmh
             "max ${m.roundToInt()}"
         } else null
 
@@ -210,6 +302,32 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         }
 
         canvas.restore()
+        drawBrightnessIndicator(canvas)
+    }
+
+    private fun drawBrightnessIndicator(canvas: Canvas) {
+        val left = indicatorHideAt - SystemClock.elapsedRealtime()
+        if (left <= 0L) return
+        val fade = (left / INDICATOR_FADE_MS.toFloat()).coerceAtMost(1f)
+        val d = resources.displayMetrics.density
+        val barH = height * 0.3f
+        val barW = 4 * d
+        val x = paddingLeft + 28 * d
+        val bottom = height / 2f + barH / 2f
+        val top = bottom - barH
+        val a = (255 * fade).toInt()
+
+        indicatorPaint.color = Color.WHITE
+        indicatorPaint.alpha = (a * 0.25f).toInt()
+        canvas.drawRoundRect(x, top, x + barW, bottom, barW / 2f, barW / 2f, indicatorPaint)
+        indicatorPaint.alpha = a
+        val fillTop = bottom - barH * indicatorPct / 100f
+        canvas.drawRoundRect(x, fillTop, x + barW, bottom, barW / 2f, barW / 2f, indicatorPaint)
+
+        labelPaint.textSize = 16 * d
+        labelPaint.color = Color.WHITE
+        labelPaint.alpha = a
+        canvas.drawText("$indicatorPct%", x + barW / 2f, top - 10 * d, labelPaint)
     }
 
     private fun driftedColor(t: Double): Int {
@@ -264,7 +382,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         private const val IDLE_FRAME_MS = 250L
         private const val SLIDE_FRAME_MS = 16L
         private const val SLIDE_SECONDS = 1.1f
-        private const val MPH = 0.621371f
+        private const val INDICATOR_MS = 900L
+        private const val INDICATOR_FADE_MS = 400L
         private const val HEADING_ADVANCE = 1.2f
         private const val MAX_ADVANCE = 1.3f
         private val COMPASS_8 = arrayOf(
