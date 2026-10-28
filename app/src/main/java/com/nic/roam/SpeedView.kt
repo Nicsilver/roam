@@ -211,6 +211,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
     // Horizontal extent of the speed block in padded coordinates, for placing the indicator.
     private var blockLeft = 0f
     private var blockRight = 0f
+    private var blockTop = 0f
+    private var blockBottom = 0f
 
     /** Shows the brightness bar for a moment; call again to keep it up while dragging. */
     fun flashBrightness(pct: Int) {
@@ -319,6 +321,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val top = (h - blockH) / 2f + dy
         blockLeft = cx - blockW / 2f
         blockRight = cx + blockW / 2f
+        blockTop = top
+        blockBottom = top + blockH
 
         val tint = if (colorShift) driftedColor(t) else baseColor
         // Dimming flags a speed that has gone stale while moving. Without a fix the readout is
@@ -355,8 +359,10 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         drawBrightnessIndicator(canvas)
     }
 
-    // Drawn in the same padded, optionally mirrored space as the readout. The bar takes
-    // whichever side of the speed block has more room and shrinks to fit rather than overlap it.
+    // Drawn in the same padded, optionally mirrored space as the readout. The bar sits on the
+    // left at full size; it only moves right when the speed block reaches into its strip, and
+    // only shrinks when neither side has room. The number follows the fill but slides along the
+    // bar to stay clear of the block.
     private fun drawBrightnessIndicator(canvas: Canvas) {
         val left = indicatorHideAt - SystemClock.elapsedRealtime()
         if (left <= 0L) return
@@ -366,35 +372,39 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         if (w <= 0f || h <= 0f) return
         val d = resources.displayMetrics.density
 
-        // The number always sits right of the bar. Under pressure the bar narrows first and
-        // only then does the number shrink.
         val fullBarW = 28 * d
-        val minBarW = 8 * d
         val fullGap = 10 * d
         val fullTextSize = 40 * d
+        val margin = 12 * d
+        val clear = 10 * d
         indicatorText.textSize = fullTextSize
         val fullTextW = indicatorText.measureText("100%")
-
-        val freeLeft = blockLeft
-        val freeRight = w - blockRight
-        val onLeft = freeLeft >= freeRight
-        val free = max(if (onLeft) freeLeft else freeRight, 0f)
-        val margin = min(12 * d, free * 0.2f)
-        val clearance = min(12 * d, free * 0.2f)
-        val avail = free - margin - clearance
-        val spare = avail - fullGap - fullTextW
-        val k = if (spare >= minBarW) 1f
-        else (avail / (minBarW + fullGap + fullTextW)).coerceIn(0.05f, 1f)
-        val barW = if (k < 1f) minBarW * k else spare.coerceAtMost(fullBarW)
-        val gap = fullGap * k
-        indicatorText.textSize = fullTextSize * k
-        val textW = fullTextW * k
         val barH = h * 0.8f
         val barTop = (h - barH) / 2f
         val barBottom = barTop + barH
-        val x = if (onLeft) margin else w - margin - textW - gap - barW
-        val a = (255 * fade).toInt()
 
+        var barW = fullBarW
+        var gap = fullGap
+        var textScale = 1f
+        val x: Float
+        val groupW = fullBarW + fullGap + fullTextW
+        val freeRight = w - blockRight - margin - clear
+        val freeLeft = blockLeft - margin - clear
+        if (freeLeft >= fullBarW) {
+            x = margin
+        } else if (freeRight >= groupW) {
+            x = w - margin - groupW
+        } else if (freeRight >= freeLeft) {
+            textScale = (freeRight / groupW).coerceIn(0.05f, 1f)
+            barW *= textScale
+            gap *= textScale
+            x = w - margin - groupW * textScale
+        } else {
+            barW = freeLeft.coerceAtLeast(2 * d)
+            x = margin
+        }
+
+        val a = (255 * fade).toInt()
         canvas.save()
         canvas.translate(paddingLeft.toFloat(), paddingTop.toFloat())
         if (mirror) canvas.scale(-1f, 1f, w / 2f, h / 2f)
@@ -409,15 +419,44 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         canvas.drawRoundRect(x, barTop, x + barW, barBottom, barW / 2f, barW / 2f, indicatorPaint)
         canvas.restore()
 
-        // The number rides the fill level, kept inside the bar's extent.
-        val textH = indicatorText.textSize
-        val ty = fillTop.coerceIn(barTop + textH * 0.5f, barBottom - textH * 0.5f)
-        indicatorText.color = Color.WHITE
-        indicatorText.alpha = a
-        indicatorText.textAlign = Paint.Align.LEFT
-        val tx = x + barW + gap
-        canvas.drawText("$indicatorPct%", tx, ty + textH * 0.3f, indicatorText)
+        // Last resort when no clear spot exists right of the bar: shrink the number, and past
+        // a point leave it out rather than cover the readout.
+        val nx = x + barW + gap
+        var k = textScale
+        while (k >= 0.2f) {
+            val ts = fullTextSize * k
+            indicatorText.textSize = ts
+            val tw = indicatorText.measureText("100%")
+            val th = ts * 0.7f
+            val cy = numberCentre(nx, tw, th, barTop, barBottom, fillTop, w - margin, clear)
+            if (cy != null) {
+                indicatorText.color = Color.WHITE
+                indicatorText.alpha = a
+                indicatorText.textAlign = Paint.Align.LEFT
+                canvas.drawText("$indicatorPct%", nx, cy + th / 2f, indicatorText)
+                break
+            }
+            k -= 0.1f
+        }
         canvas.restore()
+    }
+
+    // Vertical centre for the number: at the fill level if that is clear of the speed block,
+    // else the nearest clear spot above or below it along the bar. Null when there is none.
+    private fun numberCentre(
+        nx: Float, tw: Float, th: Float, barTop: Float, barBottom: Float,
+        fillTop: Float, rightLimit: Float, clear: Float
+    ): Float? {
+        if (nx + tw > rightLimit) return null
+        val lo = barTop + th / 2f
+        val hi = barBottom - th / 2f
+        val c = fillTop.coerceIn(lo, hi)
+        val overlapsColumn = nx < blockRight + clear && nx + tw > blockLeft - clear
+        if (!overlapsColumn) return c
+        val above = blockTop - clear - th / 2f
+        val below = blockBottom + clear + th / 2f
+        if (c <= above || c >= below) return c
+        return listOf(above, below).filter { it in lo..hi }.minByOrNull { abs(it - c) }
     }
 
     private fun driftedColor(t: Double): Int {
