@@ -6,18 +6,30 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.os.Build
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.View
+import android.view.WindowInsets
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
+enum class SpeedUnit(val pref: String, val perKmh: Float) {
+    KMH("kmh", 1f),
+    MPH("mph", 0.621371f),
+    KNOTS("kn", 0.539957f);
+
+    companion object {
+        fun fromPref(value: String?) = entries.firstOrNull { it.pref == value } ?: KMH
+    }
+}
 
 /**
  * Draws the whole UI itself so the readout can be placed at an arbitrary offset.
@@ -27,16 +39,6 @@ import kotlin.math.sin
  *  - hue drift, so no single subpixel carries the load for long
  *  - pure black background and an optional outline digit style, which lights far fewer pixels
  */
-enum class SpeedUnit(val pref: String, val perKmh: Float) {
-    KMH("kmh", 1f),
-    MPH("mph", 0.621371f),
-    KNOTS("kn", 0.539957f);
-
-    companion object {
-        fun fromPref(value: String?) = values().firstOrNull { it.pref == value } ?: KMH
-    }
-}
-
 class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
     var speedKmh = 0f
@@ -80,22 +82,22 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         typeface = Typeface.createFromAsset(context.assets, "fonts/Teko-text.ttf")
     }
 
-    // Drag callbacks for the brightness swipe. The fraction is the distance dragged since the
-    // drag began, in screen heights, positive upwards.
     var swipeEnabled = true
+    // The drag fraction is in screen heights since the drag began, positive upwards.
     var onBrightnessDragStart: (() -> Unit)? = null
     var onBrightnessDrag: ((Float) -> Unit)? = null
     var onBrightnessDragEnd: (() -> Unit)? = null
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
-    // The system owns the screen edges (back, home, revealing the bars), so a drag that starts
-    // there is never ours.
-    private val edgeGuard = 24 * resources.displayMetrics.density
+    private val minEdgeGuard = 24 * resources.displayMetrics.density
+    private var pointerId = 0
     private var downX = 0f
     private var downY = 0f
     private var trackingDrag = false
     private var dragging = false
     private var dragBaseY = 0f
+    // Fraction already dragged by fingers that have since lifted.
+    private var carried = 0f
 
     // A plain View clicks on any down/up pair inside it, so an edge swipe for back or the
     // system bars would also toggle the settings panel. Only a real tap counts.
@@ -113,39 +115,79 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         trackingDrag = false
     }
 
+    // A drag that starts inside the system gesture area (back, home, revealing the bars)
+    // belongs to the system, never to us.
+    private fun startsInGestureArea(x: Float, y: Float): Boolean {
+        var l = minEdgeGuard
+        var t = minEdgeGuard
+        var r = minEdgeGuard
+        var b = minEdgeGuard
+        val root = rootWindowInsets
+        if (root != null && Build.VERSION.SDK_INT >= 29) {
+            val g = if (Build.VERSION.SDK_INT >= 30) {
+                root.getInsets(WindowInsets.Type.systemGestures())
+            } else {
+                @Suppress("DEPRECATION")
+                root.systemGestureInsets
+            }
+            l = max(l, g.left.toFloat())
+            t = max(t, g.top.toFloat())
+            r = max(r, g.right.toFloat())
+            b = max(b, g.bottom.toFloat())
+        }
+        return x < l || x > width - r || y < t || y > height - b
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                pointerId = event.getPointerId(0)
                 downX = event.x
                 downY = event.y
                 dragging = false
-                trackingDrag = swipeEnabled &&
-                    downX > edgeGuard && downX < width - edgeGuard &&
-                    downY > edgeGuard && downY < height - edgeGuard
+                carried = 0f
+                trackingDrag = swipeEnabled && !startsInGestureArea(downX, downY)
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (event.getPointerId(event.actionIndex) == pointerId) {
+                    // Hand over to a remaining finger, re-baselined so the value does not jump.
+                    val next = if (event.actionIndex == 0) 1 else 0
+                    val y = event.getY(next)
+                    if (dragging) carried += (dragBaseY - event.getY(event.actionIndex)) / height
+                    pointerId = event.getPointerId(next)
+                    downX = event.getX(next)
+                    downY = y
+                    dragBaseY = y
+                }
             }
             MotionEvent.ACTION_MOVE -> {
+                val i = event.findPointerIndex(pointerId)
+                if (i < 0) return true
+                val x = event.getX(i)
+                val y = event.getY(i)
                 if (trackingDrag && !dragging) {
-                    val dx = event.x - downX
-                    val dy = event.y - downY
+                    val dx = x - downX
+                    val dy = y - downY
                     if (abs(dx) > touchSlop || abs(dy) > touchSlop) {
-                        // Mostly horizontal drags are not ours; stop looking at this gesture.
                         if (abs(dy) > abs(dx) * 1.5f) {
                             dragging = true
                             // Start from here so the value does not jump by the slop distance.
-                            dragBaseY = event.y
+                            dragBaseY = y
+                            carried = 0f
                             onBrightnessDragStart?.invoke()
                             val cancel = MotionEvent.obtain(event)
                             cancel.action = MotionEvent.ACTION_CANCEL
                             tapDetector.onTouchEvent(cancel)
                             cancel.recycle()
                         } else {
+                            // Mostly horizontal drags are not ours; stop looking at this gesture.
                             trackingDrag = false
                         }
                     }
                 }
                 if (dragging) {
-                    onBrightnessDrag?.invoke((dragBaseY - event.y) / height)
+                    onBrightnessDrag?.invoke(carried + (dragBaseY - y) / height)
                     return true
                 }
             }
@@ -163,6 +205,12 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
     private var indicatorPct = 0
     private var indicatorHideAt = 0L
     private val indicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val indicatorText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Typeface.createFromAsset(context.assets, "fonts/Teko-text.ttf")
+    }
+    // Horizontal extent of the speed block in padded coordinates, for placing the indicator.
+    private var blockLeft = 0f
+    private var blockRight = 0f
 
     /** Shows the brightness bar for a moment; call again to keep it up while dragging. */
     fun flashBrightness(pct: Int) {
@@ -269,6 +317,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
 
         val cx = w / 2f + dx
         val top = (h - blockH) / 2f + dy
+        blockLeft = cx - blockW / 2f
+        blockRight = cx + blockW / 2f
 
         val tint = if (colorShift) driftedColor(t) else baseColor
         // Dimming flags a speed that has gone stale while moving. Without a fix the readout is
@@ -305,29 +355,63 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         drawBrightnessIndicator(canvas)
     }
 
+    // Drawn in the same padded, optionally mirrored space as the readout. The bar takes
+    // whichever side of the speed block has more room and shrinks to fit rather than overlap it.
     private fun drawBrightnessIndicator(canvas: Canvas) {
         val left = indicatorHideAt - SystemClock.elapsedRealtime()
         if (left <= 0L) return
         val fade = (left / INDICATOR_FADE_MS.toFloat()).coerceAtMost(1f)
+        val w = (width - paddingLeft - paddingRight).toFloat()
+        val h = (height - paddingTop - paddingBottom).toFloat()
+        if (w <= 0f || h <= 0f) return
         val d = resources.displayMetrics.density
-        val barH = height * 0.3f
-        val barW = 4 * d
-        val x = paddingLeft + 28 * d
-        val bottom = height / 2f + barH / 2f
-        val top = bottom - barH
+
+        val fullBarW = 28 * d
+        val fullGap = 10 * d
+        indicatorText.textSize = 30 * d
+        val fullTextW = indicatorText.measureText("100%")
+        val fullW = fullBarW + fullGap + fullTextW
+
+        val freeLeft = blockLeft
+        val freeRight = w - blockRight
+        val onLeft = freeLeft >= freeRight
+        val free = max(if (onLeft) freeLeft else freeRight, 0f)
+        val margin = min(12 * d, free * 0.2f)
+        val clearance = min(12 * d, free * 0.2f)
+        val k = ((free - margin - clearance) / fullW).coerceIn(0.05f, 1f)
+
+        val barW = fullBarW * k
+        val gap = fullGap * k
+        indicatorText.textSize = 30 * d * k
+        val barH = h * 0.8f
+        val barTop = (h - barH) / 2f
+        val barBottom = barTop + barH
+        val x = if (onLeft) margin else w - margin - barW
         val a = (255 * fade).toInt()
+
+        canvas.save()
+        canvas.translate(paddingLeft.toFloat(), paddingTop.toFloat())
+        if (mirror) canvas.scale(-1f, 1f, w / 2f, h / 2f)
 
         indicatorPaint.color = Color.WHITE
         indicatorPaint.alpha = (a * 0.25f).toInt()
-        canvas.drawRoundRect(x, top, x + barW, bottom, barW / 2f, barW / 2f, indicatorPaint)
+        canvas.drawRoundRect(x, barTop, x + barW, barBottom, barW / 2f, barW / 2f, indicatorPaint)
         indicatorPaint.alpha = a
-        val fillTop = bottom - barH * indicatorPct / 100f
-        canvas.drawRoundRect(x, fillTop, x + barW, bottom, barW / 2f, barW / 2f, indicatorPaint)
+        val fillTop = barBottom - barH * indicatorPct / 100f
+        canvas.save()
+        canvas.clipRect(x, fillTop, x + barW, barBottom)
+        canvas.drawRoundRect(x, barTop, x + barW, barBottom, barW / 2f, barW / 2f, indicatorPaint)
+        canvas.restore()
 
-        labelPaint.textSize = 16 * d
-        labelPaint.color = Color.WHITE
-        labelPaint.alpha = a
-        canvas.drawText("$indicatorPct%", x + barW / 2f, top - 10 * d, labelPaint)
+        // The number rides the fill level, kept inside the bar's extent.
+        val textH = indicatorText.textSize
+        val ty = fillTop.coerceIn(barTop + textH * 0.5f, barBottom - textH * 0.5f)
+        indicatorText.color = Color.WHITE
+        indicatorText.alpha = a
+        indicatorText.textAlign = if (onLeft) Paint.Align.LEFT else Paint.Align.RIGHT
+        val tx = if (onLeft) x + barW + gap else x - gap
+        canvas.drawText("$indicatorPct%", tx, ty + textH * 0.3f, indicatorText)
+        canvas.restore()
     }
 
     private fun driftedColor(t: Double): Int {
