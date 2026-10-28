@@ -366,11 +366,14 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         if (w <= 0f || h <= 0f) return
         val d = resources.displayMetrics.density
 
+        // The number always sits right of the bar. Under pressure the bar narrows first and
+        // only then does the number shrink.
         val fullBarW = 28 * d
+        val minBarW = 8 * d
         val fullGap = 10 * d
-        indicatorText.textSize = 30 * d
+        val fullTextSize = 40 * d
+        indicatorText.textSize = fullTextSize
         val fullTextW = indicatorText.measureText("100%")
-        val fullW = fullBarW + fullGap + fullTextW
 
         val freeLeft = blockLeft
         val freeRight = w - blockRight
@@ -378,15 +381,18 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val free = max(if (onLeft) freeLeft else freeRight, 0f)
         val margin = min(12 * d, free * 0.2f)
         val clearance = min(12 * d, free * 0.2f)
-        val k = ((free - margin - clearance) / fullW).coerceIn(0.05f, 1f)
-
-        val barW = fullBarW * k
+        val avail = free - margin - clearance
+        val spare = avail - fullGap - fullTextW
+        val k = if (spare >= minBarW) 1f
+        else (avail / (minBarW + fullGap + fullTextW)).coerceIn(0.05f, 1f)
+        val barW = if (k < 1f) minBarW * k else spare.coerceAtMost(fullBarW)
         val gap = fullGap * k
-        indicatorText.textSize = 30 * d * k
+        indicatorText.textSize = fullTextSize * k
+        val textW = fullTextW * k
         val barH = h * 0.8f
         val barTop = (h - barH) / 2f
         val barBottom = barTop + barH
-        val x = if (onLeft) margin else w - margin - barW
+        val x = if (onLeft) margin else w - margin - textW - gap - barW
         val a = (255 * fade).toInt()
 
         canvas.save()
@@ -408,8 +414,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         val ty = fillTop.coerceIn(barTop + textH * 0.5f, barBottom - textH * 0.5f)
         indicatorText.color = Color.WHITE
         indicatorText.alpha = a
-        indicatorText.textAlign = if (onLeft) Paint.Align.LEFT else Paint.Align.RIGHT
-        val tx = if (onLeft) x + barW + gap else x - gap
+        indicatorText.textAlign = Paint.Align.LEFT
+        val tx = x + barW + gap
         canvas.drawText("$indicatorPct%", tx, ty + textH * 0.3f, indicatorText)
         canvas.restore()
     }
