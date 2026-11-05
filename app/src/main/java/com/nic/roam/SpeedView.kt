@@ -270,7 +270,8 @@ class SpeedView(context: Context, attrs: AttributeSet? = null) : View(context, a
         paint.textSize = bigSize
 
         val speed = speedKmh * unit.perKmh
-        val digits = if (!hasFix) "0" else speed.roundToInt().coerceAtLeast(0).toString()
+        val digits = if (!hasFix) "0" else String.format(java.util.Locale.getDefault(), "%.1f", speed.coerceAtLeast(0f))
+
 
         val digitsW = paint.measureText(digits)
         val gap = baseSize * 0.10f
